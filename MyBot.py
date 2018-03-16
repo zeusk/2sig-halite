@@ -13,7 +13,7 @@ game = hlt.Game("HunterKiller")
 turn = 0
 rush_policy = False
 rush_policy_num_players_max = 2
-rush_policy_dis_players_max = 16 * hlt.constants.MAX_SPEED
+rush_policy_dis_players_max = 12 * hlt.constants.MAX_SPEED
 
 while True:
     start_time = time.process_time()
@@ -26,7 +26,7 @@ while True:
         nplayers = len(gmap.all_players())
         e_cent = hlt.geom.cent_of_mass([e.loc for e in gmap.en_ships()])
         m_cent = hlt.geom.cent_of_mass([m.loc for m in gmap.my_ships()])
-        dplayers = hlt.geom.pp_dist2(e_cent, m_cent)
+        dplayers = hlt.geom.pp_dist(e_cent, m_cent)
         if nplayers <= rush_policy_num_players_max and dplayers <= rush_policy_dis_players_max:
             rush_policy = True
 
@@ -202,6 +202,8 @@ while True:
                     logging.info("TOOK WAY TOO MUCH TIME")
                     break
 
+                #Potential flee logic.
+                # if (len(gmap.en_ships()) > len(gmap.my_ships())) and (len(gmap.rich_planet()) == 0)
                 #FLEE
                 enemies = [t for t in gmap.en_uships() if s.dist_to(t)<= MAX_SPEED*2 + WEAPON_RADIUS]
                 enemies = sorted(enemies,key=lambda t:s.dist_to(t))
