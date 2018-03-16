@@ -1,4 +1,4 @@
-from . import collision, entity
+from . import entity
 
 
 class Map:
@@ -59,26 +59,13 @@ class Map:
         """
         return list(self._planets.values())
 
-    def nearby_entities_by_distance(self, entity):
-        """
-        :param entity: The source entity to find distances from
-        :return: Dict containing all entities with their designated distances
-        :rtype: dict
-        """
-        result = {}
-        for foreign_entity in self._all_ships() + self.all_planets():
-            if entity == foreign_entity:
-                continue
-            result.setdefault(entity.calculate_distance_between(foreign_entity), []).append(foreign_entity)
-        return result
-
     def _link(self):
         """
         Updates all the entities with the correct ship and planet objects
 
         :return:
         """
-        for celestial_object in self.all_planets() + self._all_ships():
+        for celestial_object in self.all_planets() + self.all_ships():
             celestial_object._link(self._players, self._planets)
 
     def _parse(self, map_string):
@@ -96,7 +83,7 @@ class Map:
         assert(len(tokens) == 0)  # There should be no remaining tokens at this point
         self._link()
 
-    def _all_ships(self):
+    def all_ships(self):
         """
         Helper function to extract all ships from all players
 
@@ -108,41 +95,57 @@ class Map:
             all_ships.extend(player.all_ships())
         return all_ships
 
-    def _intersects_entity(self, target):
-        """
-        Check if the specified entity (x, y, r) intersects any planets. Entity is assumed to not be a planet.
+    def all_uships(self):
+        return [s for s in self.all_ships() if s.can_atk()]
 
-        :param entity.Entity target: The entity to check intersections with.
-        :return: The colliding entity if so, else None.
-        :rtype: entity.Entity
-        """
-        for celestial_object in self._all_ships() + self.all_planets():
-            if celestial_object is target:
-                continue
-            d = celestial_object.calculate_distance_between(target)
-            if d <= celestial_object.radius + target.radius + 0.1:
-                return celestial_object
-        return None
+    def all_dships(self):
+        return [s for s in self.all_ships() if not s.can_atk()]
 
-    def obstacles_between(self, ship, target, ignore=()):
-        """
-        Check whether there is a straight-line path to the given point, without planetary obstacles in between.
+    def my_ships(self):
+        return self.get_me().all_ships()
 
-        :param entity.Ship ship: Source entity
-        :param entity.Entity target: Target entity
-        :param entity.Entity ignore: Which entity type to ignore
-        :return: The list of obstacles between the ship and target
-        :rtype: list[entity.Entity]
-        """
-        obstacles = []
-        entities = ([] if issubclass(entity.Planet, ignore) else self.all_planets()) \
-            + ([] if issubclass(entity.Ship, ignore) else self._all_ships())
-        for foreign_entity in entities:
-            if foreign_entity == ship or foreign_entity == target:
-                continue
-            if collision.intersect_segment_circle(ship, target, foreign_entity, fudge=ship.radius + 0.1):
-                obstacles.append(foreign_entity)
-        return obstacles
+    def my_uships(self):
+        return [s for s in self.my_ships() if s.can_atk()]
+
+    def my_dships(self):
+        return [s for s in self.my_ships() if not s.can_atk()]
+
+    def en_ships(self):
+        ships = []
+        for player in self.all_players():
+            if player != self.get_me():
+                ships = ships + player.all_ships()
+        return ships
+
+    def en_uships(self):
+        return [s for s in self.en_ships() if s.can_atk()]
+
+    def en_dships(self):
+        return [s for s in self.en_ships() if not s.can_atk()]
+
+    def my_planets(self):
+        return [p for p in self.all_planets() if p.owner == self.get_me()]
+
+    def my_uplanets(self):
+        return [p for p in self.my_planets() if not p.is_full()]
+
+    def unowned_planets(self):
+        return [p for p in self.all_planets() if not p.is_owned()]
+
+    def en_planets(self):
+        return [p for p in self.all_planets() if p.owner != self.get_me() and p.is_owned()]
+
+    def all_entities(self):
+        return self.all_ships() + self.all_planets()
+
+    def remove_ship(self, ship):
+        ship.owner.remove_ship(ship)
+
+    def is_en(self, e):
+        return e.owner != self.get_me()
+
+    def contains_pt(self, p):
+        return not(p.x < 0 or p.x > self.width or p.y < 0 or p.y > self.height)
 
 
 class Player:
@@ -155,7 +158,7 @@ class Player:
         :param ships: Ships user controls (optional)
         """
         self.id = player_id
-        self._ships = ships
+        self._ships = ships #Dict
 
     def all_ships(self):
         """
@@ -171,6 +174,10 @@ class Player:
         :rtype: entity.Ship
         """
         return self._ships.get(ship_id)
+
+    def remove_ship(self, ship):
+        if ship in self._ships:
+            del self._ships[ship]
 
     @staticmethod
     def _parse_single(tokens):
