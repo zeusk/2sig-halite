@@ -78,6 +78,7 @@ while True:
 
             move_list[(s,e)] = d
 
+
     move_list = OrderedDict(sorted(move_list.items(), key=lambda t:t[1]))
 
     #ITERATE THROUGH MOVES
@@ -88,6 +89,10 @@ while True:
     logging.info("HALFWAY TIME: {}".format(time.process_time() - start_time))
 
     cmds = []
+    for s in game.my_dships():
+        if s.planet != None && s.planet.remaining_resources <= 0:
+            cmds.append(s.undock())
+
     for (s,e), d in move_list.items():
         if time.process_time() - start_time > 1.9:
             logging.info("TOOK WAY TOO MUCH TIME")
