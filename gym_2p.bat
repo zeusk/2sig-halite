@@ -1,0 +1,1 @@
+python hlt_client\hlt_client\client.py gym -r "python BotV14/MyBot.py" -r "python BotV13/MyBot.py" -b "halite" -i 100 -H 256 -W 384
