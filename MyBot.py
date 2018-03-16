@@ -11,14 +11,26 @@ from hlt.entity import Position
 # GAME START
 game = hlt.Game("HunterKiller")
 turn = 0
+rush_policy = False
+rush_policy_num_players_max = 2
+rush_policy_dis_players_max = 16 * hlt.constants.MAX_SPEED
 
 while True:
     start_time = time.process_time()
     gmap = game.update_map()
 
     logging.info("TURN {}".format(turn))
-    turn = turn + 1
 
+    # Pre-process stage, decide if we want to rush or execute our default policy
+    if turn == 0:
+        nplayers = len(gmap.all_players())
+        e_cent = hlt.geom.cent_of_mass([e.loc for e in gmap.en_ships()])
+        m_cent = hlt.geom.cent_of_mass([m.loc for m in gmap.my_ships()])
+        dplayers = hlt.geom.pp_dist2(e_cent, m_cent)
+        if nplayers <= rush_policy_num_players_max and dplayers <= rush_policy_dis_players_max:
+            rush_policy = True
+
+    # Execute out strategy
     #HANDLE ATKS AT T=0
     has_atked = set()
     for s in gmap.all_uships():
@@ -33,7 +45,6 @@ while True:
                 t.hp -= WEAPON_DAMAGE/len(atks)
                 if t.hp <= 0:
                     gmap.remove_ship(t)
-
 
     #THREAT LEVEL CODE
     threat_level = {}
@@ -50,9 +61,12 @@ while True:
 
     #MOVE LIST WITH PRIORITIES
     move_list = {}
+    b = [e for e in gmap.unowned_planets() + gmap.my_uplanets() if e.remaining_resources > 0]
     for s in gmap.my_uships():
-        for e in gmap.unowned_planets() + gmap.my_uplanets() + gmap.en_ships():
+        for e in b + gmap.en_ships():
             if type(e) == hlt.entity.Planet:
+                if rush_policy == True:
+                    continue
                 d = helper.to_turns(s.dist_to(s.closest_pt_to(e))) + 2
                 if e.owner != gmap.get_me():
                     d += .5
@@ -65,6 +79,7 @@ while True:
 
             move_list[(s,e)] = d
 
+
     move_list = OrderedDict(sorted(move_list.items(), key=lambda t:t[1]))
 
     #ITERATE THROUGH MOVES
@@ -75,6 +90,10 @@ while True:
     logging.info("HALFWAY TIME: {}".format(time.process_time() - start_time))
 
     cmds = []
+    for s in gmap.my_dships():
+        if s.planet != None and s.planet.remaining_resources <= 0:
+            cmds.append(s.undock())
+
     for (s,e), d in move_list.items():
         if time.process_time() - start_time > 1.9:
             logging.info("TOOK WAY TOO MUCH TIME")
@@ -220,8 +239,10 @@ while True:
             if move:
                 move_table[s] = move
 
+    # Send out game commands
     game.send_command_queue(cmds)
 
+    turn = turn + 1
     elapsed_time = time.process_time() - start_time
     if elapsed_time >= .5:
         logging.info("Time Elapsed CRITICAL: {}".format(elapsed_time))
