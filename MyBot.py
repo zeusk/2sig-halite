@@ -24,10 +24,11 @@ while True:
     # Pre-process stage, decide if we want to rush or execute our default policy
     if turn == 0:
         nplayers = len(gmap.all_players())
-        e_cent = geom.cent_of_mass([e.loc for e in gmap.en_ships()])
-        m_cent = geom.cent_of_mass([m.loc for m in gmap.my_ships()])
-        dplayers = geom.pp_dist2(e_cent, m_cent)
-        rush_policy = nplayers <= rush_policy_num_players_max && dplayers <= rush_policy_dis_players_max
+        e_cent = hlt.geom.cent_of_mass([e.loc for e in gmap.en_ships()])
+        m_cent = hlt.geom.cent_of_mass([m.loc for m in gmap.my_ships()])
+        dplayers = hlt.geom.pp_dist2(e_cent, m_cent)
+        if nplayers <= rush_policy_num_players_max and dplayers <= rush_policy_dis_players_max:
+            rush_policy = True
 
     # Execute out strategy
     #HANDLE ATKS AT T=0
@@ -89,8 +90,8 @@ while True:
     logging.info("HALFWAY TIME: {}".format(time.process_time() - start_time))
 
     cmds = []
-    for s in game.my_dships():
-        if s.planet != None && s.planet.remaining_resources <= 0:
+    for s in gmap.my_dships():
+        if s.planet != None and s.planet.remaining_resources <= 0:
             cmds.append(s.undock())
 
     for (s,e), d in move_list.items():
