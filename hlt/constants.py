@@ -9,7 +9,7 @@ BASE_SHIP_HEALTH = 255
 #: Weapon cooldown period
 WEAPON_COOLDOWN = 1
 #: Weapon damage radius
-WEAPON_RADIUS = 5.0
+WEAPON_RADIUS = 6.0
 #: Weapon damage
 WEAPON_DAMAGE = 64
 #: Radius in which explosions affect other entities
