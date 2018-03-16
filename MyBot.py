@@ -17,9 +17,9 @@ import logging
 
 # GAME START
 # Here we define the bot's name as Settler and initialize the game, including communication with the Halite engine.
-game = hlt.Game("Settler")
+game = hlt.Game("HunterKiller")
 # Then we print our start message to the logs
-logging.info("Starting my Settler bot!")
+logging.info("@zeusk")
 
 while True:
     # TURN START
@@ -32,7 +32,9 @@ while True:
     for ship in game_map.get_me().all_ships():
         # If the ship is docked
         if ship.docking_status != ship.DockingStatus.UNDOCKED:
-            # Skip this ship
+            # If planet resources are exhausted, issue undock command
+            if ship.planet != None && ship.planet.remaining_resources == 0:
+                command_queue.append(ship.undock())
             continue
 
         # For each planet in the game (only non-destroyed planets are included)
@@ -58,7 +60,7 @@ while True:
                 navigate_command = ship.navigate(
                     ship.closest_point_to(planet),
                     game_map,
-                    speed=int(hlt.constants.MAX_SPEED/2),
+                    speed=int(hlt.constants.MAX_SPEED),
                     ignore_ships=True)
                 # If the move is possible, add it to the command_queue (if there are too many obstacles on the way
                 # or we are trapped (or we reached our destination!), navigate_command will return null;
